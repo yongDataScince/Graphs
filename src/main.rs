@@ -115,9 +115,6 @@ impl<'a, T: Deserialize<'a> + Hash + Eq + Copy + Debug> Graph<T> {
             t as u16
         };
 
-        // let mut aux2: Vec<Vec<u8>>  = (0..v).into_iter().map(|_| self.zeros(v as u32)).collect();
-        // let mut aux3: Vec<Vec<u8>>  = (0..v).into_iter().map(|_| self.zeros(v as u32)).collect();
-
         let aux2 = mul((&self.table, &self.table));
         let aux3 = mul((&self.table, &aux2));
 
