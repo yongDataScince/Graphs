@@ -1,7 +1,7 @@
 [
-    {"name": "a", "subjects": ["b", "c"]},
-    {"name": "b", "subjects": ["a", "e", "c"]},
-    {"name": "c", "subjects": ["a", "d", "b"]},
-    {"name": "d", "subjects": ["c", "e"]},
-    {"name": "e", "subjects": ["b", "d"]}
+    {"name": "a", "subjects": ["b", "c", "e"]},
+    {"name": "b", "subjects": ["a", "d", "c", "e"]},
+    {"name": "c", "subjects": ["a", "d", "b", "e"]},
+    {"name": "d", "subjects": ["b", "c"]},
+    {"name": "e", "subjects": ["a", "b", "c"]}
 ]
