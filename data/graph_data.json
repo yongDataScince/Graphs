@@ -1,0 +1,7 @@
+[
+    {"name": "a", "subjects": ["b", "c"]},
+    {"name": "b", "subjects": ["a", "e", "c"]},
+    {"name": "c", "subjects": ["a", "d", "b"]},
+    {"name": "d", "subjects": ["c", "e"]},
+    {"name": "e", "subjects": ["b", "d"]}
+]
