@@ -7,6 +7,11 @@ use std::{fs::File, io::Read, collections::HashMap, hash::Hash, fmt::Debug};
 
 type Table = Vec<Vec<u16>>;
 
+enum GraphInit {
+    LoadFromJSON(String),
+    Empty
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Node<T: Hash + Eq + Copy + Debug> {
     name: T,
@@ -20,21 +25,20 @@ struct Graph<T: Hash + Eq + Copy + Debug> {
 }
 
 impl<'a, T: Deserialize<'a> + Hash + Eq + Copy + Debug> Graph<T> {
-    fn new(file_name: Option<String>) -> Graph<T> {
-        let mut new_graph = match file_name {
-            None => Graph { nodes: Vec::new(), table: Vec::new() },
-            Some(file_name) => Self::load_graph(file_name)
-        };
-
-        new_graph.create_table();
-        new_graph.draw_table();
-        new_graph
+    fn new(init_type: GraphInit) -> Graph<T> {
+        match init_type {
+            GraphInit::LoadFromJSON(file_name) => Graph::load_graph(file_name),
+            GraphInit::Empty => Graph {
+                nodes: Vec::new(),
+                table: Vec::new()
+            },
+        }
     }
 
     fn load_graph(file_name: String) -> Graph<T> {
         /*
             Format of JSON file:
-            [
+            [X
                 {"name": <T>, "subjects": [<T>...]},
             ]
         */
@@ -50,17 +54,13 @@ impl<'a, T: Deserialize<'a> + Hash + Eq + Copy + Debug> Graph<T> {
         Graph { nodes, table: Vec::new() }
     }
 
-    fn zeros(&self, n: u32) -> Vec<u16> {
-        (0..n).into_iter().map(|_| 0).collect()
-    }
-
     fn create_table(&mut self) {
         let mut table: Table = vec![];
         let mut field_ids:HashMap<T, usize> = HashMap::new();
-
+        // Count of vertecles
         let n: usize = *(&self.nodes.len());
         // create empty table
-        (0..n).into_iter().for_each(|_| table.push( self.zeros(n as u32)));
+        (0..n).into_iter().for_each(|_| table.push( zeros(n)));
 
         let _ = &self.nodes.clone().into_iter()
             .map(|node: Node<T>| -> T { node.name })
@@ -82,12 +82,11 @@ impl<'a, T: Deserialize<'a> + Hash + Eq + Copy + Debug> Graph<T> {
     }
 
     fn draw_table(&self) {
-        self.nodes
+        self.table
             .clone()
             .into_iter()
-            .enumerate()
-            .for_each(|(i, _node): (usize, Node<T>)| {
-                println!("{:?}", self.table[i]);
+            .for_each(|line| {
+                println!("{:?}", line);
             });
     }
 
@@ -96,7 +95,7 @@ impl<'a, T: Deserialize<'a> + Hash + Eq + Copy + Debug> Graph<T> {
         let v = self.len();
 
         let mul = |(a, b) : (&Table, &Table)| -> Vec<Vec<u16>> {
-            let mut res: Vec<Vec<u16>>  = (0..v).into_iter().map(|_| self.zeros(v as u32)).collect();
+            let mut res: Vec<Vec<u16>>  = (0..v).into_iter().map(|_| zeros(v)).collect();
             for i in 0..v {
                 for j in 0..v {
                     res[i as usize][j as usize] = 0;
@@ -139,19 +138,65 @@ impl<'a, T: Deserialize<'a> + Hash + Eq + Copy + Debug> Graph<T> {
         self.nodes.len()
     }
 
+    /* 
+        Global clusterring coeff.:
+
+            number of closed triplets
+        -----------------------------------
+            number of connected triples
+    */
     fn c(&self) -> f32 {
         println!("{} / {}", self.close_triplet_count(), self.close_triplet_count() + self.open_triplet_count());
         self.close_triplet_count()
             / ( self.close_triplet_count() + self.open_triplet_count())
     }
 
-    fn load_from_table(file_name: String) -> Graph<T> {
-        todo!()
+    fn load_from_table(file_name: String) -> Graph<u32> {
+        let mut str_file = String::new();
+        let mut file = File::open(file_name).unwrap();
+        let _ = file.read_to_string(&mut str_file);
+
+        let table_len = str_file.split("\n").collect::<Vec<_>>().len();
+        let mut new_table: Table = (0..table_len).into_iter().map(|_| zeros(table_len)).collect();
+
+        str_file.split("\n").into_iter().enumerate().for_each(|(row, line)| {
+            line.split(",").into_iter().enumerate().for_each(|(col, digit)| {
+                // new_table[row][col] = digit.parse::<u16>().unwrap();
+                match digit.parse::<u16>() {
+                    Ok(data) => new_table[row][col] = data,
+                    Err(_) => println!("invalid digit: {}", digit)
+                };
+            })
+        });
+
+        let new_nodes: Vec<Node<u32>> = new_table
+            .clone()
+            .into_iter()
+            .enumerate()
+            .map(|(idx, row)| {
+                let mut curr_node = Node { name: idx as u32, subjects: zeros(table_len).into_iter().map(|x| x as u32).collect()};
+                row.iter().enumerate().into_iter().for_each(|(i, val)| {
+                    if *val == 1 {
+                        curr_node.subjects[i] = i as u32;
+                    }
+                });
+                curr_node
+            })
+            .collect();
+
+        Graph { nodes: new_nodes, table: new_table }
     }
 }
 
+fn zeros(n: usize) -> Vec<u16> {
+    (0..n).into_iter().map(|_| 0).collect()
+}
+
 fn main() {
-    let graph: Graph<&str> = Graph::new(Some("./data/graph_data.json".to_string()));
+    let mut graph: Graph<&str> = Graph::new();
+    println!("{:.5}", graph.c());
+
+    graph.load_from_table("./data/table.txt".to_string());
 
     println!("{:.5}", graph.c())
 }
